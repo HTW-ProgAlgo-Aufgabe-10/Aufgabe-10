@@ -1,19 +1,22 @@
 import java.io.File
-
-import Aufgabe10_Nicolas.getListOfFiles
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.SparkSession
 
 object Aufgabe10_Nicolas {
+  val AppName:String = "aufgabe10"
+  val Languages:List[String] = List("German")
+  //val Languages:List[String] = List("Dutch", "English", "French", "German", "Italian", "Russian", "Spanish", "Ukrainian")
+  val AnalysisDir:String = "src/main/resources/analysis/"
+  val ResultDir:String = "src/main/resources/result/"
+  val StopWordsDir:String = "src/main/resources/stopwords/"
 
   def main(args: Array[String]) {
 
-    val conf = new SparkConf().setAppName("aufgabe10").setMaster("local[*]").set("spark.driver.host", "127.0.0.1")
+    val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1")
       .set("spark.hadoop.orc.overwrite.output.file", "true")
     val sc = new SparkContext(conf)
-    filterWordsForLanguage("German", sc)
 
+    for(language <- Languages) { filterWordsForLanguage(language, sc) }
   }
 
   def getListOfFiles(dir: String): List[File] = {
@@ -26,9 +29,11 @@ object Aufgabe10_Nicolas {
   }
 
   def filterWordsForLanguage(lang: String, sc: SparkContext) : Unit = {
-    val germanFiles = getListOfFiles("src/main/resources/analysis/" + lang)
+    val files = getListOfFiles(AnalysisDir + lang)
+    if(files.isEmpty) return
+
     var top10 = null: RDD[(String, Int)]
-    germanFiles.foreach(file => {
+    files.foreach(file => {
       if (file.getPath.split("\\.").last.equals("txt")) {
         val textFile = sc.textFile(file.getPath)
         val counts = textFile.flatMap(line => line.split("\\PL+"))
@@ -37,7 +42,7 @@ object Aufgabe10_Nicolas {
           .sortBy(_._2, ascending = false)
 
         counts.coalesce(1)
-          .saveAsTextFile("src/main/resources/result/" + lang + "/" + file.getName + "/" + System.currentTimeMillis())
+          .saveAsTextFile(ResultDir + lang + "/" + file.getName + "/" + System.currentTimeMillis())
         if (top10 == null) {
           top10 = counts
         } else {
@@ -45,8 +50,10 @@ object Aufgabe10_Nicolas {
         }
       }
     })
-    top10.reduceByKey(_+_).sortBy(_._2, ascending = false)
-      .zipWithIndex().filter(_._2 < 10).coalesce(1).saveAsTextFile("src/main/resources/result/top10/" + lang + "/" + System.currentTimeMillis())
+
+    val stopwords = sc.textFile(StopWordsDir + lang + ".txt").map(word => (word.toLowerCase, 1))
+    top10.subtractByKey(stopwords).reduceByKey(_+_).sortBy(_._2, ascending = false)
+      .zipWithIndex().filter(_._2 < 10).coalesce(1).saveAsTextFile(ResultDir + "top10/" + lang + "/" + System.currentTimeMillis())
 
   }
 }

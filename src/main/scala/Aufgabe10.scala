@@ -1,24 +1,63 @@
+import java.io.File
+
+import Aufgabe10_Nicolas.getListOfFiles
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.SparkSession
 
 object Aufgabe10 {
+  val AppName:String = "aufgabe10"
+  val Languages:List[String] = List("Italian")
+  //val Languages:List[String] = List("Dutch", "English", "French", "German", "Italian", "Russian", "Spanish", "Ukrainian")
+  val AnalysisDir:String = "src/main/resources/analysis/"
+  val ResultDir:String = "src/main/resources/result/"
+  val StopWordsDir:String = "src/main/resources/stopwords/"
 
   def main(args: Array[String]) {
-    /*val logFile = "src/main/resources/Dutch/Baas Gansendonck - Hendrik Conscience.txt"
-    val spark = SparkSession.builder.appName("Simple Application").config("spark.driver.host", "127.0.0.1").master("local[*]").getOrCreate()
-    val logData = spark.read.textFile(logFile).cache()
-    val numAs = logData.filter(line => line.contains("a")).count()
-    val numBs = logData.filter(line => line.contains("b")).count()
-    println(s"Lines with a: $numAs, Lines with b: $numBs")
-    spark.stop()*/
 
-    val conf = new SparkConf().setAppName("aufgabe10").setMaster("local[*]").set("spark.driver.host", "127.0.0.1")
+    val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1")
+      .set("spark.hadoop.orc.overwrite.output.file", "true")
     val sc = new SparkContext(conf)
-    val textFile = sc.textFile("src/main/resources/Dutch/Baas Gansendonck - Hendrik Conscience.txt")
-    val counts = textFile.flatMap(line => line.split("\\W+"))
-      .map(word => (word, 1))
-      .reduceByKey(_ + _)
-    counts.saveAsTextFile("src/main/test.txt")
+
+    for(language <- Languages) { filterWordsForLanguage(language, sc) }
   }
 
+  def getListOfFiles(dir: String): List[File] = {
+    val d = new File(dir)
+    if (d.exists && d.isDirectory) {
+      d.listFiles.filter(_.isFile).toList
+    } else {
+      List[File]()
+    }
+  }
+
+  def filterWordsForLanguage(lang: String, sc: SparkContext) : Unit = {
+    val files = getListOfFiles(AnalysisDir + lang)
+    if(files.isEmpty) return
+
+    var top10 = null: RDD[(String, Int)]
+    files.foreach(file => {
+      if (file.getPath.split("\\.").last.equals("txt")) {
+        println(sc.textFile(file.getPath))
+        val textFile = sc.textFile(file.getPath)
+        val counts = textFile.flatMap(line => line.split("\\PL+"))
+          .map(word => (word.toLowerCase, 1))
+          .reduceByKey(_ + _)
+          .sortBy(_._2, ascending = false)
+
+        counts.coalesce(1)
+          .saveAsTextFile(ResultDir + lang + "/" + file.getName + "/" + System.currentTimeMillis())
+        if (top10 == null) {
+          top10 = counts
+        } else {
+          top10 = top10.union(counts)
+        }
+      }
+    })
+
+    val stopwords = sc.textFile(StopWordsDir + lang + ".txt").map(word => (word.toLowerCase, 1))
+    top10.subtractByKey(stopwords).reduceByKey(_+_).sortBy(_._2, ascending = false)
+      .zipWithIndex().filter(_._2 < 10).coalesce(1).saveAsTextFile(ResultDir + "top10/" + lang + "/" + System.currentTimeMillis())
+
+  }
 }
