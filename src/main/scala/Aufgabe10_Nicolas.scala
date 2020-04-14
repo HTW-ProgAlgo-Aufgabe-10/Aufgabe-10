@@ -26,7 +26,7 @@ object Aufgabe10_Nicolas {
   }
 
   def filterWordsForLanguage(lang: String, sc: SparkContext) : Unit = {
-    val germanFiles = getListOfFiles("src/main/resources/" + lang)
+    val germanFiles = getListOfFiles("src/main/resources/analysis/" + lang)
     var top10 = null: RDD[(String, Int)]
     germanFiles.foreach(file => {
       if (file.getPath.split("\\.").last.equals("txt")) {
@@ -37,7 +37,7 @@ object Aufgabe10_Nicolas {
           .sortBy(_._2, ascending = false)
 
         counts.coalesce(1)
-          .saveAsTextFile("src/main/resources/output/" + lang + "/" + file.getName + "/" + System.currentTimeMillis())
+          .saveAsTextFile("src/main/resources/result/" + lang + "/" + file.getName + "/" + System.currentTimeMillis())
         if (top10 == null) {
           top10 = counts
         } else {
@@ -46,7 +46,7 @@ object Aufgabe10_Nicolas {
       }
     })
     top10.reduceByKey(_+_).sortBy(_._2, ascending = false)
-      .zipWithIndex().filter(_._2 < 10).coalesce(1).saveAsTextFile("src/main/resources/output/result/" + lang + "/" + System.currentTimeMillis())
+      .zipWithIndex().filter(_._2 < 10).coalesce(1).saveAsTextFile("src/main/resources/output/top10/" + lang + "/" + System.currentTimeMillis())
 
   }
 }
