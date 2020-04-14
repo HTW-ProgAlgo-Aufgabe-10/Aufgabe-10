@@ -46,7 +46,7 @@ object Aufgabe10_Nicolas {
       }
     })
     top10.reduceByKey(_+_).sortBy(_._2, ascending = false)
-      .zipWithIndex().filter(_._2 < 10).coalesce(1).saveAsTextFile("src/main/resources/output/top10/" + lang + "/" + System.currentTimeMillis())
+      .zipWithIndex().filter(_._2 < 10).coalesce(1).saveAsTextFile("src/main/resources/result/top10/" + lang + "/" + System.currentTimeMillis())
 
   }
 }
