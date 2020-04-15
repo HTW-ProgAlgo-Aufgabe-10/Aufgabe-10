@@ -7,7 +7,7 @@ import org.apache.spark.sql.SparkSession
 
 object Aufgabe10 {
   val AppName:String = "aufgabe10"
-  val Languages:List[String] = List("Italian")
+  val Languages:List[String] = List("German")
   //val Languages:List[String] = List("Dutch", "English", "French", "German", "Italian", "Russian", "Spanish", "Ukrainian")
   val AnalysisDir:String = "src/main/resources/analysis/"
   val ResultDir:String = "src/main/resources/result/"
@@ -38,11 +38,11 @@ object Aufgabe10 {
     var top10 = null: RDD[(String, Int)]
     files.foreach(file => {
       if (file.getPath.split("\\.").last.equals("txt")) {
-        println(sc.textFile(file.getPath))
         val textFile = sc.textFile(file.getPath)
         val counts = textFile.flatMap(line => line.split("\\PL+"))
           .map(word => (word.toLowerCase, 1))
           .reduceByKey(_ + _)
+          .subtractByKey(sc.makeRDD(Array(("",1)))) //remove flatMap => split entry of empty lines
           .sortBy(_._2, ascending = false)
 
         counts.coalesce(1)

@@ -39,6 +39,7 @@ object Aufgabe10_Nicolas {
         val counts = textFile.flatMap(line => line.split("\\PL+"))
           .map(word => (word.toLowerCase, 1))
           .reduceByKey(_ + _)
+          .subtractByKey(sc.makeRDD(Array(("",1)))) //remove flatMap => split entry of empty lines
           .sortBy(_._2, ascending = false)
 
         counts.coalesce(1)
