@@ -21,19 +21,14 @@ object Aufgabe10 {
   val Top10Dir:String = ResultDir + "top10/"
   val StopWordsDir:String = ResourcesDir +"stopwords/"
 
-  //Ccv format options
-  val CsvOptions: Map[String, String] = Map(
-    ("header", "true"))
-
   def main(args: Array[String]) {
     //Init spark
-    val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1")
-      .set("spark.hadoop.orc.overwrite.output.file", "true").set("spark.ui.enabled", "false")
+    val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1").set("spark.ui.enabled", "false")
     val sc = new SparkContext(conf)
 
     //Clear result folders
-    val frequencyFolder = new Directory(new File(ResultDir))
-    frequencyFolder.deleteRecursively()
+    val resultFolder = new Directory(new File(ResultDir))
+    resultFolder.deleteRecursively()
 
     //For each language filter words and create top10 list
     for(language <- Languages) {
@@ -42,6 +37,11 @@ object Aufgabe10 {
     }
   }
 
+  /**
+   * Gets list of files from a specific directory
+   * @param dir language directory
+   * @return list of all files in that directory
+   */
   def getListOfFiles(dir: String): List[File] = {
     //Get files of a directory
     val d = new File(dir)
@@ -52,6 +52,11 @@ object Aufgabe10 {
     }
   }
 
+  /**
+   * Filters the words from each file for a specific language
+   * @param lang language
+   * @param sc spark context
+   */
   def filterWordsForLanguage(lang: String, sc:SparkContext) : RDD[(String, Int)] = {
     //Get files for a language
     val files = getListOfFiles(AnalysisDir + lang)
@@ -74,8 +79,8 @@ object Aufgabe10 {
           .sortBy(_._2, ascending = false)
 
         //Save output
-        counts.repartition(1)
-          .saveAsTextFile(FrequencyDir + lang + "/" + file.getName + "/")
+        counts.map(entry => s"${entry._1} : ${entry._2}").coalesce(1)
+          .saveAsTextFile(FrequencyDir + lang + "/" + file.getName)
 
         //Accumulate words for all files
         if (allWords == null) {
@@ -94,23 +99,8 @@ object Aufgabe10 {
     val stopwords = sc.textFile(StopWordsDir + lang + ".txt").map(word => (word.toLowerCase, 1))
 
     //Create top10 list
-    val top10List = data.subtractByKey(stopwords).reduceByKey(_ + _).sortBy(_._2, ascending = false)
-      .zipWithIndex().filter(_._2 < 10).collect()
-
-    //Convert RDD to DataFrame
-    val spark = SparkSession.builder.master("local").getOrCreate;
-    import spark.implicits._ //der Input muss hier bleiben
-    var output: Seq[(String, String, String)] = Seq()
-    top10List.foreach(item => {
-      output = output :+ new Tuple3(item._2 + "", item._1._1, item._1._2 + "")
-    })
-    val table = output.toDF("rank", "word", "frequency")
-
-    //Save top10 list
-    table.repartition(1) // Writes to a single file
-      .write
-      .mode(SaveMode.Overwrite)
-      .options(CsvOptions)
-      .csv(Top10Dir + lang)
+    data.subtractByKey(stopwords).reduceByKey(_+_).sortBy(_._2, ascending = false)
+      .zipWithIndex().filter(_._2 < 10).coalesce(1)
+      .map(entry => s"#${entry._2}: ${entry._1._1} (${entry._1._2})").saveAsTextFile(Top10Dir + "top10/" + lang)
   }
 }
