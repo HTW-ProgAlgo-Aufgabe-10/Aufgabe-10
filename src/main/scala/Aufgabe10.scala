@@ -94,6 +94,11 @@ object Aufgabe10 {
     allWords
   }
 
+  /**
+   * Create top10 list from data
+   * @param lang language
+   * @param data DataFrame
+   */
   def createTop10(lang: String, data:RDD[(String, Int)], sc:SparkContext) = {
     //Get stopwords
     val stopwords = sc.textFile(StopWordsDir + lang + ".txt").map(word => (word.toLowerCase, 1))
