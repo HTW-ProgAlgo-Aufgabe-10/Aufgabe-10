@@ -26,7 +26,7 @@ object Aufgabe10 {
   def main(args: Array[String]) {
     start = System.nanoTime
     //Init spark
-    val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1").set("spark.ui.enabled", "false")
+    val conf = new SparkConf().setAppName(AppName).setMaster("local[8]").set("spark.driver.host", "127.0.0.1")
     val sc = new SparkContext(conf)
 
     //Clear result folders
@@ -36,7 +36,7 @@ object Aufgabe10 {
     //For each language filter words and create top10 list
     for(language <- Languages) {
       val words = filterWordsForLanguage(language, sc)
-      if (!words.isEmpty()) createTop10(language,words, sc)
+      createTop10(language,words, sc)
     }
     //calculate completion time
     end = System.nanoTime
@@ -84,10 +84,11 @@ object Aufgabe10 {
           .map(word => (word.toLowerCase, 1))
           .reduceByKey(_ + _)
           .subtractByKey(sc.makeRDD(Array(("",1)))) //remove flatMap => split entry of empty lines
+          .coalesce(1)
           .sortBy(_._2, ascending = false)
 
         //Save output
-        counts.map(entry => s"${entry._1} : ${entry._2}").coalesce(1)
+        counts.map(entry => s"${entry._1} : ${entry._2}")
           .saveAsTextFile(FrequencyDir + lang + "/" + file.getName)
 
         //Accumulate words for all files
@@ -112,8 +113,8 @@ object Aufgabe10 {
     val stopwords = sc.textFile(StopWordsDir + lang + ".txt").map(word => (word.toLowerCase, 1))
 
     //Create top10 list
-    data.subtractByKey(stopwords).reduceByKey(_+_).sortBy(_._2, ascending = false)
-      .zipWithIndex().filter(_._2 < 10).coalesce(1)
-      .map(entry => s"#${entry._2}: ${entry._1._1} (${entry._1._2})").saveAsTextFile(Top10Dir + "top10/" + lang)
+    data.subtractByKey(stopwords).reduceByKey(_+_).coalesce(1).sortBy(_._2, ascending = false)
+      .filter(_._2 < 10).zipWithIndex()
+      .map(entry => s"#${entry._2}: ${entry._1._1} (${entry._1._2})").saveAsTextFile(Top10Dir + lang)
   }
 }
