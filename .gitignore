@@ -2,3 +2,4 @@
 project/target
 target
 src/main/resources/result/
+src/main/resources/analysis/allFilesCombined.txt

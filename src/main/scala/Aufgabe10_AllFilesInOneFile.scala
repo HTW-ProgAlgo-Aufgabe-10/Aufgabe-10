@@ -13,7 +13,7 @@ object Aufgabe10_AllFilesInOneFile {
   //File paths
   val ResourcesDir = "src/main/resources/"
   val AnalysisDir: String = ResourcesDir + "analysis/"
-  val ResultDir: String = ResourcesDir + "result/allFilesinOne/"
+  val ResultDir: String = ResourcesDir + "result/allFilesInOne/"
   val StopWordsDir: String = ResourcesDir + "stopwords/"
   var start = 0L
   var end = 0L
@@ -82,7 +82,7 @@ object Aufgabe10_AllFilesInOneFile {
       .sortBy(_._2, ascending = false)
     //Save output
     counts.map(entry => s"${entry._1} : ${entry._2}").coalesce(1)
-      .saveAsTextFile(ResultDir + "/allFilesWithoutStopwordsRemoved")
+      .saveAsTextFile(ResultDir + "/withoutStopwordsRemoved")
     counts
   }
 
@@ -100,6 +100,6 @@ object Aufgabe10_AllFilesInOneFile {
     //Remove stopwords from all words
     allWords.subtractByKey(stopwords).reduceByKey(_ + _).sortBy(_._2, ascending = false)
       .zipWithIndex().filter(_._2 < 10).coalesce(1)
-      .map(entry => s"#${entry._2}: ${entry._1._1} (${entry._1._2})").saveAsTextFile(ResultDir + "/allFilesWithStopwordsRemoved")
+      .map(entry => s"#${entry._2}: ${entry._1._1} (${entry._1._2})").saveAsTextFile(ResultDir + "/withStopwordsRemoved")
   }
 }
