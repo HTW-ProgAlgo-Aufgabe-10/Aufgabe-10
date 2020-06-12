@@ -16,7 +16,7 @@ object Aufgabe10 {
   //File paths
   val ResourcesDir = "src/main/resources/"
   val AnalysisDir:String = ResourcesDir + "analysis/"
-  val ResultDir:String = ResourcesDir + "result/"
+  val ResultDir:String = ResourcesDir + "result/allFilesSeperated/"
   val FrequencyDir:String = ResultDir + "frequency/"
   val Top10Dir:String = ResultDir + "top10/"
   val StopWordsDir:String = ResourcesDir +"stopwords/"

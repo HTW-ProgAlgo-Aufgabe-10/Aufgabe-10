@@ -18,7 +18,7 @@ object Aufgabe10_AllFilesInOneFile {
   //File paths
   val ResourcesDir = "src/main/resources/"
   val AnalysisDir: String = ResourcesDir + "analysis/"
-  val ResultDir: String = ResourcesDir + "result/"
+  val ResultDir: String = ResourcesDir + "result/allFilesinOne/"
   val FrequencyDir: String = ResultDir + "frequency/"
   val Top10Dir: String = ResultDir + "top10/"
   val StopWordsDir: String = ResourcesDir + "stopwords/"
