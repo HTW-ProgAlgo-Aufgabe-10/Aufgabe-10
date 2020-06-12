@@ -5,7 +5,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import scala.reflect.io.Directory
 
 
-object Aufgabe10_2 {
+object Aufgabe10_ReadWholeTextFiles {
   //Constants
   val AppName:String = "aufgabe10"
   val Languages = List("Dutch", "English", "French", "German", "Italian", "Russian", "Spanish", "Ukrainian")
