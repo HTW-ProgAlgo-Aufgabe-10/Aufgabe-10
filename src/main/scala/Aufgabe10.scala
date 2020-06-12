@@ -1,17 +1,16 @@
-import java.io.{ByteArrayOutputStream, File, PrintWriter}
+import java.io.File
+import java.time.Duration
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SaveMode, SparkSession}
-import org.apache.spark.{Partition, SparkConf, SparkContext, TaskContext}
+import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.reflect.io.Directory
-
 
 object Aufgabe10 {
   //Constants
   val AppName:String = "aufgabe10"
-  val  Languages = List("Dutch")
-  //val  Languages = List("Dutch", "English", "French", "German", "Italian", "Russian", "Spanish", "Ukrainian")
+  //val  Languages = List("Dutch")
+  val  Languages = List("Dutch", "English", "French", "German", "Italian", "Russian", "Spanish", "Ukrainian")
 
   //File paths
   val ResourcesDir = "src/main/resources/"
@@ -20,8 +19,12 @@ object Aufgabe10 {
   val FrequencyDir:String = ResultDir + "frequency/"
   val Top10Dir:String = ResultDir + "top10/"
   val StopWordsDir:String = ResourcesDir +"stopwords/"
+  //variables for calculating compution time
+  var start = 0L
+  var end = 0L
 
   def main(args: Array[String]) {
+    start = System.nanoTime
     //Init spark
     val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1").set("spark.ui.enabled", "false")
     val sc = new SparkContext(conf)
@@ -35,6 +38,11 @@ object Aufgabe10 {
       val words = filterWordsForLanguage(language, sc)
       if (!words.isEmpty()) createTop10(language,words, sc)
     }
+    //calculate completion time
+    end = System.nanoTime
+    val duration = Duration.ofNanos(end - start)
+    printf("%d Hours %d Minutes %d Seconds%n",
+      duration.toHours(), duration.toMinutes() % 60, duration.getSeconds() % 60);
   }
 
   /**

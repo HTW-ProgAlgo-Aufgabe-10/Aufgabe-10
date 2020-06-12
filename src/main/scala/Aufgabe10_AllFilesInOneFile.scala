@@ -1,46 +1,36 @@
-import java.io.{File, FileOutputStream, FileWriter, PrintWriter}
+import java.io.{File, FileWriter, PrintWriter}
 import java.time.Duration
-
-import Aufgabe10.StopWordsDir
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-
 import scala.io.Source
 import scala.reflect.io.Directory
-
 
 object Aufgabe10_AllFilesInOneFile {
   //Constants
   val AppName: String = "aufgabe10"
-  //val Languages = List("Dutch")
   val Languages = List("Dutch", "English", "French", "German", "Italian", "Russian", "Spanish", "Ukrainian")
 
   //File paths
   val ResourcesDir = "src/main/resources/"
   val AnalysisDir: String = ResourcesDir + "analysis/"
   val ResultDir: String = ResourcesDir + "result/allFilesinOne/"
-  val FrequencyDir: String = ResultDir + "frequency/"
-  val Top10Dir: String = ResultDir + "top10/"
   val StopWordsDir: String = ResourcesDir + "stopwords/"
   var start = 0L
   var end = 0L
-  var write: PrintWriter = null
 
   def main(args: Array[String]) {
-
     start = System.nanoTime
     //Init spark
     val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1")
     val sc = new SparkContext(conf)
-
     //Clear result folders
     val resultFolder = new Directory(new File(ResultDir))
     resultFolder.deleteRecursively()
-
-    //For each language filter words and create top10 list
+    //Start counting words and filtering them
     createFileContainingAllTexts()
     val allWords = countWords(sc)
     filterStopWords(sc, allWords);
+    //calculate completion time
     end = System.nanoTime
     val duration = Duration.ofNanos(end - start)
     printf("%d Hours %d Minutes %d Seconds%n",
@@ -63,28 +53,27 @@ object Aufgabe10_AllFilesInOneFile {
     }
   }
 
+  /**
+   * Creates a file containing the texts of all files in AnalysisDir
+   */
   def createFileContainingAllTexts() = {
-    new File(AnalysisDir + "allFilesCombined.txt").delete()
+    new File(AnalysisDir + "allFilesCombined.txt").delete() //deletes the old file
     val fw = new FileWriter(AnalysisDir + "allFilesCombined.txt", true)
     for (language <- Languages) {
         val fileList = getListOfFiles(AnalysisDir + language)
         for (file <- fileList) {
-          fw.write(Source.fromFile(file).mkString)
+          fw.write(Source.fromFile(file).mkString) //adds file content to file containing all texts
         }
     }
-
-
   }
 
   /**
-   * Filters the words from each file for a specific language
+   * Filters the words from the file containing all files
    *
    * @param sc spark context
    */
   def countWords(sc: SparkContext): RDD[(String, Int)] = {
-
     val textFile = sc.textFile(AnalysisDir + "allFilesCombined.txt")
-
     //Filter words
     val counts = textFile.flatMap(line => line.split("\\PL+"))
       .map(word => (word.toLowerCase, 1))
@@ -97,15 +86,20 @@ object Aufgabe10_AllFilesInOneFile {
     counts
   }
 
+  /**
+   * Filters out stopwords from countWords() result
+   * @param sc spark context
+   * @param allWords allWords from countWords() method
+   */
   def filterStopWords(sc: SparkContext, allWords: RDD[(String, Int)]) = {
     var stopwords = sc.makeRDD(Array(("", 1)))
     for (language <- Languages) {
       stopwords = stopwords ++ sc.textFile(StopWordsDir + language + ".txt").map(word => (word.toLowerCase, 1))
-      stopwords = stopwords.reduceByKey(_ + _)
+      stopwords = stopwords.reduceByKey(_ + _) //reduces stopwords by key so that same stopword from different languages get combined
     }
+    //Remove stopwords from all words
     allWords.subtractByKey(stopwords).reduceByKey(_ + _).sortBy(_._2, ascending = false)
       .zipWithIndex().filter(_._2 < 10).coalesce(1)
       .map(entry => s"#${entry._2}: ${entry._1._1} (${entry._1._2})").saveAsTextFile(ResultDir + "/allFilesWithStopwordsRemoved")
-
   }
 }

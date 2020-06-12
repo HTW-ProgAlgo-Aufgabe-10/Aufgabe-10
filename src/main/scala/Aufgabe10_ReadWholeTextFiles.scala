@@ -1,9 +1,7 @@
-import java.io.{ByteArrayOutputStream, File, PrintWriter}
+import java.io.File
 import java.time.Duration
-
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{Partition, SparkConf, SparkContext, TaskContext}
-
+import org.apache.spark.{SparkConf, SparkContext}
 import scala.reflect.io.Directory
 
 
