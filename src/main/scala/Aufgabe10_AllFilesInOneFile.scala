@@ -1,4 +1,4 @@
-import java.io.{File, FileWriter, PrintWriter}
+import java.io.{File, FileWriter}
 import java.time.Duration
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -19,17 +19,20 @@ object Aufgabe10_AllFilesInOneFile {
   var end = 0L
 
   def main(args: Array[String]) {
+    start = System.nanoTime
     //Init spark
-    val conf = new SparkConf().setAppName(AppName).setMaster("local[32]").set("spark.driver.host", "127.0.0.1")
+    val conf = new SparkConf().setAppName(AppName).setMaster("local[*]").set("spark.driver.host", "127.0.0.1")
     val sc = new SparkContext(conf)
+
     //Clear result folders
     val resultFolder = new Directory(new File(ResultDir))
     resultFolder.deleteRecursively()
+
     //Start counting words and filtering them
     createFileContainingAllTexts()
-    start = System.nanoTime
     val allWords = countWords(sc)
     filterStopWords(sc, allWords);
+
     //calculate completion time
     end = System.nanoTime
     val duration = Duration.ofNanos(end - start)
