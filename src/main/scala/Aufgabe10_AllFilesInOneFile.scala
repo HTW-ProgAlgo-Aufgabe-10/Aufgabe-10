@@ -63,10 +63,10 @@ object Aufgabe10_AllFilesInOneFile {
     new File(AnalysisDir + "allFilesCombined.txt").delete() //deletes the old file
     val fw = new FileWriter(AnalysisDir + "allFilesCombined.txt", true)
     for (language <- Languages) {
-        val fileList = getListOfFiles(AnalysisDir + language)
-        for (file <- fileList) {
-          fw.write(Source.fromFile(file).mkString) //adds file content to file containing all texts
-        }
+      val fileList = getListOfFiles(AnalysisDir + language)
+      for (file <- fileList) {
+        fw.write(Source.fromFile(file).mkString) //adds file content to file containing all texts
+      }
     }
   }
 
@@ -91,14 +91,14 @@ object Aufgabe10_AllFilesInOneFile {
 
   /**
    * Filters out stopwords from countWords() result
-   * @param sc spark context
+   *
+   * @param sc       spark context
    * @param allWords allWords from countWords() method
    */
   def filterStopWords(sc: SparkContext, allWords: RDD[(String, Int)]) = {
     var stopwords = sc.makeRDD(Array(("", 1)))
     for (language <- Languages) {
-      stopwords = stopwords ++ sc.textFile(StopWordsDir + language + ".txt").map(word => (word.toLowerCase, 1))
-      stopwords = stopwords.reduceByKey(_ + _) //reduces stopwords by key so that same stopword from different languages get combined
+      stopwords = stopwords ++ sc.textFile(StopWordsDir + language + ".txt").map(word => (word.toLowerCase, 1)).reduceByKey(_ + _)
     }
     //Remove stopwords from all words
     allWords.subtractByKey(stopwords).reduceByKey(_ + _).sortBy(_._2, ascending = false)
